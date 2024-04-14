@@ -4,9 +4,25 @@ import bcrypt from 'bcrypt';
 
 export const getUsers = async (req, res) => {
     try {
-        // const {filters} = req.body;
-        // const {userId, fullName} = filters || {};
-        const users = await User.find();
+        const {filters, sorting, pagination} = req.body;
+        const {email} = filters || {};
+        const {pageSize = -1, pageNumber = 1} = pagination || {};
+        let query = User.find();
+        if (email) {
+            query = query.findOne({email});
+        }
+        if (sorting && sorting.length > 0) {
+            sorting.map(({field, order}) => {
+                if (field && order && (order === 1 || order === -1))
+                    query = query.sort({[field]: order});
+            })
+        }
+        if (pageSize !== -1) {
+            const countAll = await User.countDocuments();
+            const skip = (pageNumber - 1) * pageSize;
+            query = query.skip(skip).limit(pageSize);
+        }
+        const users = await query;
         res.status(200).json({
             msg: 'Get users successfully!',
             data: users
